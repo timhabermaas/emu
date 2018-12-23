@@ -1,9 +1,9 @@
 require "test_helper"
 
 describe Emu do
-  describe ".id" do
+  describe ".raw" do
     it "always returns the input" do
-      assert_equal "foo", Emu.id.run!("foo")
+      assert_equal "foo", Emu.raw.run!("foo")
     end
   end
 
@@ -234,7 +234,7 @@ describe Emu do
     before :each do
       @decoder = Emu.from_key(:foo, Emu.str_to_int).then do |x|
         if x > 0
-          Emu.from_key(:bar, Emu.id)
+          Emu.from_key(:bar, Emu.raw)
         else
           Emu.from_key(:bar, Emu.str_to_int)
         end
