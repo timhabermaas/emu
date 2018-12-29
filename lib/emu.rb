@@ -69,8 +69,8 @@ module Emu
 
   # Creates a decoder which converts a string to a boolean (++true++, ++false++) value.
   #
-  # "0" and "false" is considered ++false++, "1" and "true" is considered ++true++.
-  # Decoding every other value will fail.
+  # "0" and "false" are considered ++false++, "1" and "true" are considered ++true++.
+  # Decoding any other value will fail.
   #
   # @example
   #   Emu.str_to_bool.run!("true") # => true
@@ -163,6 +163,24 @@ module Emu
       next Err.new("`#{hash.inspect}` doesn't contain key `#{key.inspect}`") unless hash.has_key?(key)
 
       decoder.run(hash.fetch(key))
+    end
+  end
+
+  # Creates a decoder which extracts the value of an array at the given index.
+  #
+  # @example
+  #   Emu.at_index(0, Emu.str_to_int).run!(["42"]) # => 42
+  #   Emu.at_index(0, Emu.str_to_int).run!(["a"]) # => raise DecodeError, '`"a"` can't be converted to an integer'
+  #   Emu.at_index(1, Emu.str_to_int).run!(["42"]) # => raise DecodeError, '`["42"]` doesn't contain index `1`'
+  #
+  # @param index [Integer] the key of the hash map
+  # @param decoder [Emu::Decoder<b>] the decoder to apply to the value at index ++index++
+  # @return [Emu::Decoder<b>]
+  def self.at_index(index, decoder)
+    Decoder.new do |array|
+      next Err.new("`#{array.inspect}` doesn't contain index `#{index.inspect}`") if index >= array.length
+
+      decoder.run(array[index])
     end
   end
 

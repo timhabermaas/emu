@@ -173,6 +173,24 @@ describe Emu do
     end
   end
 
+  describe ".at_index" do
+    before :each do
+      @decoder = Emu.at_index(1, Emu.str_to_int)
+    end
+
+    it "returns an error if the index is missing" do
+      assert @decoder.run(["2"]).error?
+    end
+
+    it "returns an error if the inner decoder fails" do
+      assert @decoder.run(["2", 3]).error?
+    end
+
+    it "returns the decoded value if the value exists and it can be decoded" do
+      assert_equal 42, @decoder.run!(["2", "42"])
+    end
+  end
+
   describe ".map_n" do
     describe "two arguments" do
       before :each do
