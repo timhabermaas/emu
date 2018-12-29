@@ -184,6 +184,41 @@ module Emu
     end
   end
 
+  # Creates a decoder which decodes the values of an array and returns the decoded array.
+  #
+  # @example
+  #   Emu.array(Emu.str_to_int).run!(["42", "43"]) # => [42, 43]
+  #   Emu.array(Emu.str_to_int).run!("42") # => raise DecodeError, "`"a"` is not an Array"
+  #   Emu.array(Emu.str_to_int).run!(["a"]) # => raise DecodeError, '`"a"` can't be converted to an integer'
+  #
+  # @param decoder [Emu::Decoder<b>] the decoder to apply to all values of the array
+  # @return [Emu::Decoder<b>]
+  def self.array(decoder)
+    Decoder.new do |array|
+      next Err.new("`#{array.inspect}` is not an Array") unless array.is_a?(Array)
+
+      result = []
+
+      i = 0
+      error_found = nil
+      while i < array.length && !error_found
+        r = decoder.run(array[i])
+        if r.error?
+          error_found = r
+        else
+          result << r.unwrap
+        end
+        i += 1
+      end
+
+      if error_found
+        error_found
+      else
+        Ok.new(result)
+      end
+    end
+  end
+
   # Builds a decoder out of ++n++ decoders and maps a function over the result
   # of the passed in decoders. For the block to be called all decoders must succeed.
   #

@@ -173,6 +173,24 @@ describe Emu do
     end
   end
 
+  describe ".array" do
+    before :each do
+      @decoder = Emu.array(Emu.str_to_int)
+    end
+
+    it "returns an error if not an array is passed in" do
+      assert @decoder.run("a").error?
+    end
+
+    it "returns an error if the inner decoder fails" do
+      assert @decoder.run(["foo"]).error?
+    end
+
+    it "returns an array of decoded values if all values are decodeable" do
+      assert_equal [42, 43], @decoder.run!(["42", "43"])
+    end
+  end
+
   describe ".at_index" do
     before :each do
       @decoder = Emu.at_index(1, Emu.str_to_int)
