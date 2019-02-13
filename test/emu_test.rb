@@ -37,6 +37,37 @@ describe Emu do
     end
   end
 
+  describe ".str_to_float" do
+    before do
+      @decoder = Emu.str_to_float
+    end
+
+    describe "not a string" do
+      [nil, 2, {}, [], true].each do |input|
+        it "returns an error for #{input.inspect}" do
+          assert @decoder.run(input).error?
+        end
+      end
+    end
+
+    describe "not a valid float" do
+      ["a", "", "-", "123a", "a1"].each do |input|
+        it "returns an error for #{input.inspect}" do
+          assert @decoder.run(input).error?
+        end
+      end
+    end
+
+    describe "valid float" do
+      [["0", 0.0], ["-1.2", -1.2], ["-3.4", -3.4], ["1234.14", 1234.14], ["0.421", 0.421]].each do |(input, output)|
+        it "returns #{output.inspect} for #{input.inspect}" do
+          assert_equal output.class, Float
+          assert_equal output, @decoder.run!(input)
+        end
+      end
+    end
+  end
+
   describe ".integer" do
     before do
       @decoder = Emu.integer
@@ -53,6 +84,33 @@ describe Emu do
     describe "given integer" do
       it "returns the passed in integer" do
         assert_equal 3, @decoder.run!(3)
+      end
+    end
+  end
+
+  describe ".float" do
+    before do
+      @decoder = Emu.float
+    end
+
+    describe "given not a float" do
+      [nil, "2", {}, [], true].each do |input|
+        it "returns an error for #{input.inspect}" do
+          assert @decoder.run(input).error?
+        end
+      end
+    end
+
+    describe "given integer" do
+      it "accepts the input and transforms it to a float" do
+        assert_equal 3.0, @decoder.run!(3)
+        assert_equal Float, @decoder.run!(3).class
+      end
+    end
+
+    describe "given float" do
+      it "returns the passed in float" do
+        assert_equal 3.5, @decoder.run!(3.5)
       end
     end
   end

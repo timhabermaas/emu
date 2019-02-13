@@ -25,6 +25,7 @@ module Emu
   #   Emu.str_to_int.run!("42") # => 42
   #   Emu.str_to_int.run!("a") # => raise DecodeError, "`\"a\"` can't be converted to an Integer"
   #   Emu.str_to_int.run!(42) # => raise DecodeError, "`42` is not a String"
+  # @return [Emu::Decoder<Integer>]
   def self.str_to_int
     Decoder.new do |s|
       next Err.new("`#{s.inspect}` is not a String") unless s.is_a?(String)
@@ -37,17 +38,54 @@ module Emu
     end
   end
 
+  # Creates a decoder which converts a string to an float. It uses ++Float++
+  # for the conversion.
+  #
+  # @example
+  #   Emu.str_to_float.run!("42.2") # => 42.2
+  #   Emu.str_to_float.run!("42") # => 42.0
+  #   Emu.str_to_float.run!("a") # => raise DecodeError, "`\"a\"` can't be converted to a Float"
+  #   Emu.str_to_float.run!(42) # => raise DecodeError, "`42` is not a String"
+  # @return [Emu::Decoder<Float>]
+  def self.str_to_float
+    Decoder.new do |s|
+      next Err.new("`#{s.inspect}` is not a String") unless s.is_a?(String)
+
+      begin
+        Ok.new(Float(s))
+      rescue TypeError, ArgumentError
+        Err.new("`#{s.inspect}` can't be converted to a Float")
+      end
+    end
+  end
+
   # Creates a decoder which only accepts integers.
   #
   # @example
-  #   Emu.integers.run!(2) # => 2
-  #   Emu.integers.run!("2") # => raise DecodeError, '`"2"` is not an Integer'
+  #   Emu.integer.run!(2) # => 2
+  #   Emu.integer.run!("2") # => raise DecodeError, '`"2"` is not an Integer'
   # @return [Emu::Decoder<Integer>]
   def self.integer
     Decoder.new do |i|
       next Err.new("`#{i.inspect}` is not an Integer") unless i.is_a?(Integer)
 
       Ok.new(i)
+    end
+  end
+
+  # Creates a decoder which only accepts floats (including integers).
+  # Integers are converted to floats because the result type should be uniform.
+  #
+  # @example
+  #   Emu.float.run!(2) # => 2.0
+  #   Emu.float.run!(2.1) # => 2.1
+  #   Emu.float.run!("2") # => raise DecodeError, '`"2"` is not a Float'
+  # @return [Emu::Decoder<Float>]
+  def self.float
+    Decoder.new do |i|
+      next Err.new("`#{i.inspect}` is not a Float") unless i.is_a?(Float) || i.is_a?(Integer)
+
+      Ok.new(i.to_f)
     end
   end
 
@@ -67,10 +105,10 @@ module Emu
     end
   end
 
-  # Creates a decoder which converts a string to a boolean (++true++, ++false++) value.
+  # Creates a decoder which converts a string to a boolean ( ++true++, ++false++ ) value.
   #
   # "0" and "false" are considered ++false++, "1" and "true" are considered ++true++.
-  # Decoding any other value will fail.
+  # Trying to decode any other value will fail.
   #
   # @example
   #   Emu.str_to_bool.run!("true") # => true
@@ -97,12 +135,14 @@ module Emu
 
   # Creates a decoder which always succeeds and yields the input.
   #
-  # This might be useful if you want to do defer type conversion to
-  # a later time.
+  # This might be useful if you don't care about the exact shape of
+  # of your data and don't have a need to inspect it (e.g. some binary
+  # data).
   #
   # @example
   #   Emu.raw.run!(true) # => true
   #   Emu.raw.run!("2") # => "2"
+  # @return [Emu::Decoder<a>]
   def self.raw
     Decoder.new do |s|
       Ok.new(s)
@@ -189,7 +229,7 @@ module Emu
   # @example
   #   Emu.array(Emu.str_to_int).run!(["42", "43"]) # => [42, 43]
   #   Emu.array(Emu.str_to_int).run!("42") # => raise DecodeError, "`"a"` is not an Array"
-  #   Emu.array(Emu.str_to_int).run!(["a"]) # => raise DecodeError, '`"a"` can't be converted to an integer'
+  #   Emu.array(Emu.str_to_int).run!(["a"]) # => raise DecodeError, '`"a"` can't be converted to an Integer'
   #
   # @param decoder [Emu::Decoder<b>] the decoder to apply to all values of the array
   # @return [Emu::Decoder<b>]
@@ -228,11 +268,12 @@ module Emu
   #   end
   #
   #   d.run!("3") # => "333"
-  #   d.run!("a") # => raise DecodeError, '`"a"` can't be converted to an integer'
+  #   d.run!("a") # => raise DecodeError, '`"a"` can't be converted to an Integer'
   #
   # @param decoders [Array<Decoder>] the decoders to map over
   # @yield [a, b, c, ...] Passes the result of all decoders to the block
   # @yieldreturn [z] the value the decoder should evaluate to
+  # @return [Emu::Decoder<a>]
   def self.map_n(*decoders, &block)
     raise "decoder count must match argument count of provided block" unless decoders.size == block.arity
 
