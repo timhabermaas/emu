@@ -29,7 +29,10 @@ require 'emu'
 
 # Map north to the vector [0, -1].
 # If this fails, try mapping east to [-1, 0] and so on.
-direction = (Emu.match('N') > [0, -1]) | (Emu.match('E') > [-1, 0]) | (Emu.match('S') > [0, 1]) | (Emu.match('W') > [1, 0])
+direction = (Emu.match('N') > [0, -1]) |
+  (Emu.match('E') > [-1, 0]) |
+  (Emu.match('S') > [0, 1]) |
+  (Emu.match('W') > [1, 0])
 # The speed is transmitted using a String, convert it to a Float.
 speed = Emu.str_to_float
 
@@ -83,6 +86,59 @@ Just like "higher order functions" describe functions which take other functions
 * `fmap`
 * ...
 
+
+## Common Use-Cases
+
+### Mapping
+
+### dependent decoding (bind/then)
+
+### Decoding Recursive Structures
+
+When decoding recursive structures we quickly run into the issue of endless recursion:
+
+```ruby
+{
+  name: 'Elvis Presley',
+  parent: {
+    name: 'R2D2',
+    parent: {
+      name: 'Barack Obama'
+      parent: nil
+    }
+  }
+}
+
+# person will be nil on the right-hand side => runtime error
+person =
+  Emu.map_n(
+    Emu.from_key(:name, Emu.string),
+    Emu.from_key(:parent, Emu.nil | person)) do |name, parent|
+      Person.new(name, parent)
+  end
+
+# person calls itself => infinite recursion
+def person
+  Emu.map_n(
+    Emu.from_key(:name, Emu.string),
+    Emu.from_key(:parent, Emu.nil | person)) do |name, parent|
+      Person.new(name, parent)
+  end
+end
+```
+
+This can be solved by wrapping the recursive call in `lazy`:
+
+```ruby
+person =
+  Emu.map_n(
+    Emu.from_key(:name, Emu.string),
+    Emu.from_key(:parent, Emu.nil | Emu.lazy { person })) do |name, parent|
+      Person.new(name, parent)
+  end
+```
+
+`lazy` takes a block which is only evaluated once you call `run` on the decoder. This avoids funky behavior when defining recursive decoders.
 
 ## Development
 

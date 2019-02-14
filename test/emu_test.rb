@@ -7,6 +7,16 @@ describe Emu do
     end
   end
 
+  describe ".nil" do
+    it "accepts nil" do
+      assert_equal nil, Emu.nil.run!(nil)
+    end
+
+    it "rejects anything else" do
+      assert Emu.nil.run("foo").error?
+    end
+  end
+
   describe ".str_to_int" do
     before do
       @decoder = Emu.str_to_int
@@ -288,6 +298,28 @@ describe Emu do
     end
   end
 
+  describe ".lazy" do
+    before do
+      @decoder =
+       Emu.map_n(
+         Emu.from_key(:name, Emu.string),
+         Emu.from_key(:parent, Emu.match(nil) | Emu.lazy { @decoder })) do |name, parent|
+           [name, parent]
+       end
+    end
+
+    it "works" do
+      input = {
+        name: 'foo',
+        parent: {
+          name: 'bar',
+          parent: nil
+        }
+      }
+      @decoder.run!(input)
+    end
+  end
+
   describe "#fmap" do
     before :each do
       @decoder = Emu.str_to_int.fmap(&:succ)
@@ -351,7 +383,7 @@ describe Emu do
     end
   end
 
-  describe "|" do
+  describe "#|" do
     before :each do
       @decoder = Emu.match("42") | Emu.str_to_int | Emu.match("bar")
     end

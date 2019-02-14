@@ -188,6 +188,18 @@ module Emu
     end
   end
 
+  # Creates a decoder which only accepts `nil` values.
+  #
+  # @example
+  #   Emu.nil.run!(nil) # => nil
+  #   Emu.nil.run!(42) # => raise DecodeError, "`42` isn't `nil`"
+  # @return [Emu::Decoder<NilClass>]
+  def self.nil
+    Decoder.new do |s|
+      s.nil? ? Ok.new(s) : Err.new("`#{s.inspect}` isn't `nil`")
+    end
+  end
+
   # Creates a decoder which extracts the value of a hash map according to the given key.
   #
   # @example
@@ -200,6 +212,7 @@ module Emu
   # @return [Emu::Decoder<b>]
   def self.from_key(key, decoder)
     Decoder.new do |hash|
+      next Err.new("`#{hash.inspect}` is not a Hash") unless hash.respond_to?(:has_key?) && hash.respond_to?(:fetch)
       next Err.new("`#{hash.inspect}` doesn't contain key `#{key.inspect}`") unless hash.has_key?(key)
 
       decoder.run(hash.fetch(key))
@@ -288,6 +301,13 @@ module Emu
       else
         Ok.new(block.call(*results.map(&:unwrap)))
       end
+    end
+  end
+
+  def self.lazy
+    Decoder.new do |input|
+      inner_decoder = yield
+      inner_decoder.run(input)
     end
   end
 end
