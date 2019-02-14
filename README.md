@@ -27,27 +27,24 @@ parameters at once.
 ```ruby
 require 'emu'
 
-# Map north to the vector [0, -1].
-# If this fails, try mapping east to [-1, 0] and so on.
-direction = (Emu.match('N') > [0, -1]) |
+direction =
+  (Emu.match('N') > [0, -1]) |
   (Emu.match('E') > [-1, 0]) |
   (Emu.match('S') > [0, 1]) |
   (Emu.match('W') > [1, 0])
-# The speed is transmitted using a String, convert it to a Float.
+
 speed = Emu.str_to_float
 
-# map_n combines several decoders to one.
 wind = Emu.map_n(
-  # Extract the key `:direction` from the hash and decode its value using `direction`.
   Emu.from_key(:direction, direction),
-  # Extract the key `:speed` from the hash and decode its value using `speed`.
   Emu.from_key(:speed, speed)) do |(x, y), speed|
     [x * speed, y * speed]
 end
 
-# The data we received from some external source
-params = {direction: "W", speed: "4.5"}
-# Decoding the data using our constructed decoder
+params = {
+  direction: "W",
+  speed: "4.5"
+}
 wind.run!(params) # => [4.5, 0.0]
 ```
 
