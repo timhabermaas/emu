@@ -5,6 +5,10 @@ cache: bundler
 rvm:
   - 2.3.7
   - 2.6.0
-before_install: gem install bundler -v 1.17.1
+before_install:
+# Force bundler 1.17.1 by first removing all old versions.
+# See https://docs.travis-ci.com/user/languages/ruby/
+  - gem uninstall -v '>= 2' -i $(rvm gemdir)@global -ax bundler || true
+  - gem install bundler -v 1.17.1
 install: bundle --full-index
 script: bundle exec rake
