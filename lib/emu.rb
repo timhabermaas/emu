@@ -105,9 +105,9 @@ module Emu
     end
   end
 
-  # Creates a decoder which converts a string to a boolean ( ++true++, ++false++ ) value.
+  # Creates a decoder which converts a string to a boolean (<tt>true</tt>, <tt>false</tt>) value.
   #
-  # "0" and "false" are considered ++false++, "1" and "true" are considered ++true++.
+  # <tt>"0"</tt> and <tt>"false"</tt> are considered ++false++, <tt>"1"</tt> and <tt>"true"</tt> are considered ++true++.
   # Trying to decode any other value will fail.
   #
   # @example
@@ -304,6 +304,22 @@ module Emu
     end
   end
 
+  # Wraps a decoder +d+ in a lazily evaluated block to avoid endless recursion when
+  # dealing with recursive data structures. <tt>Emu.lazy { d }.run!</tt> behaves exactly like
+  # +d.run!+.
+  #
+  # @example
+  #   person =
+  #     Emu.map_n(
+  #       Emu.from_key(:name, Emu.string),
+  #       Emu.from_key(:parent, Emu.nil | Emu.lazy { person })) do |name, parent|
+  #         Person.new(name, parent)
+  #     end
+  #
+  #   person.run!({name: "foo", parent: { name: "bar", parent: nil }}) # => Person("foo", Person("bar", nil))
+  #
+  # @yieldreturn [Emu::Decoder<a>] the wrapped decoder
+  # @return [Emu::Decoder<a>]
   def self.lazy
     Decoder.new do |input|
       inner_decoder = yield

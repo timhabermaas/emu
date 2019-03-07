@@ -1,7 +1,28 @@
 # Emu
 [![Build Status](https://travis-ci.org/timhabermaas/emu.svg?branch=master)](https://travis-ci.org/timhabermaas/emu)
 
-Emu is a composable decoder/type coercion library. It can be used to transform Rails' `params` or the result of `JSON.parse` to objects your business logic understands.
+Emu is a composable decoder and type coercion library. It can be used to
+transform Rails' `params`, the result of `JSON.parse` or any other input type
+to objects your business logic understands.
+
+Its design is inspired by Elm's
+[`Json.Decode`](https://package.elm-lang.org/packages/elm-lang/core/5.1.1/Json-Decode)
+library in particular and [parser
+combinators](https://en.wikipedia.org/wiki/Parser_combinator) in general.
+
+## What sets it apart from the billion other coercing libraries?
+
+The three main differences are:
+
+* `Emu` is completely composable – there's no arbitrary difference between
+  decoders which return objects and decoders which return simple types. All
+  emus are equal!
+* `Emu` isn't restricted by a 1:1 relationship between input attributes and
+  output attributes – you can transform the input structure in any way
+  you desire.
+* `Emu` abstains from using a DSL. Everything can be accomplished by a
+  combination of method definitions and variable assignments. In particular
+  there's no need for `Library.register_type` calls.
 
 ## Installation
 
@@ -86,7 +107,71 @@ Just like "higher order functions" describe functions which take other functions
 
 ## Common Use-Cases
 
-### Mapping
+### Decoding a Hash
+
+For decoding a Hash you use a combination of `from_key(x, d)` (to decode the value at key `x` using the decoder `d`) and `map_n` to combine
+multiple decoders into one:
+
+```ruby
+decoder = Emu.map_n(
+  Emu.from_key(:x, Emu.str_to_int),
+  Emu.from_key(:y, Emu.str_to_int)
+) do |x, y|
+  [x, y]
+end
+
+params = {
+  x: "32",
+  y: "2"
+}
+
+Emu.from_key(:x, Emu.str_to_int).run!(params) # => 32
+decoder.run!(params) # => [32, 2]
+```
+
+This gives you full control over optional keys, how to handle `nil`-values and makes it possible to map `n` keys to `y` values.
+
+### Building Custom Decoders
+
+You can build any decoder you want out of a combination of `raw`, `#then`, `succeed` and `fail`. For example the following
+describes a decoder which maps the input `"foo"` to `123` and fails for any other input.
+
+```ruby
+Emu.raw.then do |input|
+  if input == "foo"
+    Emu.succeed(123)
+  else
+    Emu.fail("bla")
+  end
+end
+```
+
+Usually you want to make use of existing decoders which handle coercing instead of building one with `raw` from scratch.
+For example the decoder which converts a String to a positive integer can be expressed as follows:
+
+```ruby
+Emu.str_to_int.then do |n|
+  if n > 0
+    Emu.succeed(n)
+  else
+    Emu.fail("#{int.inspect} must be positive")
+  end
+end
+```
+
+### Changing decoded values
+
+Converting 0-based indices to 1-based ones, uppercasing some string, converting from one (physical) unit to another, ... are all
+reasons where you want to run some function on a decoded value. That's what `fmap` provides:
+
+```ruby
+zero_based_index = Emu.str_to_int
+one_based_index = zero_based_index.fmap { |i| i + 1}
+zero_based_index.run!("12") # => 12
+one_based_index.run!("12") # => 13
+```
+
+_Note: You can't change the status of a decoder from success to failure by using only `Decoder#fmap`. You need `then` for that_
 
 ### dependent decoding (bind/then)
 
