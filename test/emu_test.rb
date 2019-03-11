@@ -241,6 +241,24 @@ describe Emu do
     end
   end
 
+  describe ".from_key_or_nil" do
+    before :each do
+      @decoder = Emu.from_key_or_nil(:a, Emu.str_to_int)
+    end
+
+    it "returns nil if the key is missing" do
+      assert_equal nil, @decoder.run!({b: "foo"})
+    end
+
+    it "returns an error if the inner decoder fails" do
+      assert @decoder.run({a: "foo"}).error?
+    end
+
+    it "returns the decoded value if the value exists and it can be decoded" do
+      assert_equal 42, @decoder.run!({a: "42"})
+    end
+  end
+
   describe ".array" do
     before :each do
       @decoder = Emu.array(Emu.str_to_int)

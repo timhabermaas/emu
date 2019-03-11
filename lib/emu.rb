@@ -219,6 +219,32 @@ module Emu
     end
   end
 
+  # Creates a decoder which extracts the value of a hash map according to the
+  # given key. If the key cannot be found ++nil++ will be returned.
+  #
+  # Note: If a key can be found, but the value decoder fails
+  # ++from_key_or_nil++ will fail as well. This is usually what you want,
+  # because this indicates bad data you don't know how to handle.
+  #
+  # @example
+  #   Emu.from_key_or_nil(:a, Emu.str_to_int).run!({a: "42"}) # => 42
+  #   Emu.from_key_or_nil(:a, Emu.str_to_int).run!({a: "a"}) # => raise DecodeError, '`"a"` can't be converted to an integer'
+  #   Emu.from_key_or_nil(:a, Emu.str_to_int).run!({b: "42"}) # => nil
+  #
+  # @param key [a] the key of the hash map
+  # @param decoder [Emu::Decoder<b>] the decoder to apply to the value at key ++key++
+  # @return [Emu::Decoder<b, NilClass>]
+  def self.from_key_or_nil(key, decoder)
+    Decoder.new do |hash|
+      next Err.new("`#{hash.inspect}` is not a Hash") unless hash.respond_to?(:has_key?) && hash.respond_to?(:fetch)
+      if hash.has_key?(key)
+        decoder.run(hash.fetch(key))
+      else
+        Ok.new(nil)
+      end
+    end
+  end
+
   # Creates a decoder which extracts the value of an array at the given index.
   #
   # @example
