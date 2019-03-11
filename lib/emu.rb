@@ -38,7 +38,7 @@ module Emu
     end
   end
 
-  # Creates a decoder which converts a string to an float. It uses ++Float++
+  # Creates a decoder which converts a string to a float. It uses ++Float++
   # for the conversion.
   #
   # @example
@@ -312,7 +312,7 @@ module Emu
   # @param decoders [Array<Decoder>] the decoders to map over
   # @yield [a, b, c, ...] Passes the result of all decoders to the block
   # @yieldreturn [z] the value the decoder should evaluate to
-  # @return [Emu::Decoder<a>]
+  # @return [Emu::Decoder<z>]
   def self.map_n(*decoders, &block)
     raise "decoder count must match argument count of provided block" unless decoders.size == block.arity
 
